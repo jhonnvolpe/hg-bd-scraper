@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hg-scraper-api
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /api/health
+    autoDeploy: true

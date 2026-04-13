@@ -1,0 +1,23 @@
+{
+  "name": "hg-scraper-backend",
+  "version": "1.0.0",
+  "description": "HG-BD Tender Scraper - Portable Node.js Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "scrape": "node scraper.js"
+  },
+  "keywords": ["tender", "scraper", "pmc", "civil-supervision"],
+  "author": "HG-BD Team",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^21.6.1",
+    "cors": "^2.8.5",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

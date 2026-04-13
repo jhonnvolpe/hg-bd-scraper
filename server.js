@@ -1,21 +1,14 @@
 /**
  * HG-BD Tender Scraper Backend
- * Standard Portable Node.js - Works on any cloud or on-premise
+ * Render-Compatible Version
  */
 
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
+const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const path = require('path');
-
-// Try to import puppeteer - will fail gracefully if not installed
-let puppeteer;
-try {
-  puppeteer = require('puppeteer');
-} catch (e) {
-  console.log('Puppeteer not installed. Install with: npm install puppeteer');
-}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,7 +35,6 @@ async function loadTenders() {
     const data = await fs.readFile(DATA_FILE, 'utf8');
     return JSON.parse(data);
   } catch (e) {
-    // Return default/mock data if file doesn't exist
     return getDefaultTenders();
   }
 }
@@ -53,7 +45,7 @@ async function saveTenders(tenders) {
   await fs.writeFile(DATA_FILE, JSON.stringify(tenders, null, 2));
 }
 
-// Default/mock tenders (2026 dates)
+// Default tenders
 function getDefaultTenders() {
   return [
     {
@@ -65,9 +57,9 @@ function getDefaultTenders() {
       value: 2500000,
       deadline: '2026-04-25',
       status: 'new',
-      description: 'Project Management Consultancy services for major infrastructure development including roads, utilities, and public facilities.',
-      scope: ['Project planning', 'Schedule management', 'Cost control', 'Quality assurance', 'Stakeholder coordination'],
-      requirements: ['10+ years PMC experience', 'Registered with MPW', 'Similar project portfolio'],
+      description: 'Project Management Consultancy services for major infrastructure development.',
+      scope: ['Project planning', 'Schedule management', 'Cost control'],
+      requirements: ['10+ years PMC experience'],
       url: 'https://www.etenders.gov.kw/',
       scrapedAt: new Date().toISOString()
     },
@@ -80,24 +72,24 @@ function getDefaultTenders() {
       value: 1800000,
       deadline: '2026-04-28',
       status: 'new',
-      description: 'Construction management for civil works including drainage systems, road pavements, and structural elements.',
-      scope: ['Site management', 'Quality control', 'Progress monitoring', 'Safety compliance', 'Documentation'],
-      requirements: ['Civil engineering degree', '5+ years management exp', 'Local market knowledge'],
+      description: 'Construction management for civil works.',
+      scope: ['Site management', 'Quality control'],
+      requirements: ['Civil engineering degree'],
       url: 'https://www.mpw.gov.kw/',
       scrapedAt: new Date().toISOString()
     },
     {
       id: 'PAHW-2026-2203',
       source: 'PAHW',
-      title: 'Management of Implementation - Housing Projects 1635/1636/1637',
+      title: 'Management of Implementation - Housing Projects',
       type: 'Management of Implementation',
       contractRef: 'PAHW-1635-1636-1637',
       value: 3200000,
       deadline: '2026-05-05',
       status: 'new',
-      description: 'Comprehensive management of implementation for residential infrastructure development projects under PAHW contracts 1635, 1636, and 1637.',
-      scope: ['Implementation oversight', 'Contract management', 'Progress reporting', 'Budget control', 'Risk management'],
-      requirements: ['PMP certification preferred', 'Housing sector experience', 'Bilingual capability'],
+      description: 'Management of implementation for residential infrastructure.',
+      scope: ['Implementation oversight', 'Contract management'],
+      requirements: ['PMP certification preferred'],
       url: 'https://www.pahw.gov.kw/',
       scrapedAt: new Date().toISOString()
     },
@@ -110,134 +102,46 @@ function getDefaultTenders() {
       value: 2100000,
       deadline: '2026-05-12',
       status: 'new',
-      description: 'Management of implementation for (2) projects in Sabah Al-Ahmad area for Public Authority for Applied Education and Training.',
-      scope: ['Project implementation management', 'Contractor coordination', 'Progress tracking', 'Quality assurance', 'Stakeholder reporting'],
-      requirements: ['Arabic/English bilingual', 'Implementation management experience', 'Educational sector knowledge'],
+      description: 'Management of implementation for (2) projects in Sabah Al-Ahmad area.',
+      scope: ['Project implementation management'],
+      requirements: ['Arabic/English bilingual'],
       url: 'https://www.paaet.edu.kw/',
-      scrapedAt: new Date().toISOString()
-    },
-    {
-      id: 'CAPT-2026-0893',
-      source: 'CAPT',
-      title: 'Construction Supervision for Public Works',
-      type: 'Civil Supervision',
-      contractRef: 'General',
-      value: 950000,
-      deadline: '2026-04-30',
-      status: 'reviewed',
-      description: 'Supervision services for various public works projects across multiple locations.',
-      scope: ['Daily inspections', 'Material testing', 'Contractor coordination', 'Progress reports'],
-      requirements: ['Engineering background', 'Site supervision experience'],
-      url: 'https://www.etenders.gov.kw/',
-      scrapedAt: new Date().toISOString()
-    },
-    {
-      id: 'MPW-2026-4452',
-      source: 'MPW',
-      title: 'Infrastructure Development PMC - Package A',
-      type: 'PMC',
-      contractRef: 'General',
-      value: 4500000,
-      deadline: '2026-05-10',
-      status: 'new',
-      description: 'Large-scale infrastructure PMC services covering multiple project phases.',
-      scope: ['Feasibility studies', 'Design review', 'Tender management', 'Construction oversight', 'Project closeout'],
-      requirements: ['15+ years experience', 'International project exposure', 'Strong references'],
-      url: 'https://www.mpw.gov.kw/',
-      scrapedAt: new Date().toISOString()
-    },
-    {
-      id: 'PAHW-2026-2204',
-      source: 'PAHW',
-      title: 'Civil Works Supervision - Residential Complex',
-      type: 'Civil Supervision',
-      contractRef: 'General',
-      value: 1200000,
-      deadline: '2026-05-02',
-      status: 'interested',
-      description: 'Civil supervision for new residential complex development project.',
-      scope: ['Foundation works', 'Structural supervision', 'MEP coordination', 'Final inspections'],
-      requirements: ['Civil engineering degree', 'Residential project experience'],
-      url: 'https://www.pahw.gov.kw/',
-      scrapedAt: new Date().toISOString()
-    },
-    {
-      id: 'CAPT-2026-0894',
-      source: 'CAPT',
-      title: 'Project Management Consultancy - Roads & Highways',
-      type: 'PMC',
-      contractRef: 'General',
-      value: 2800000,
-      deadline: '2026-04-22',
-      status: 'new',
-      description: 'PMC services for road and highway infrastructure development.',
-      scope: ['Route planning', 'Traffic management', 'Environmental compliance', 'Stakeholder engagement'],
-      requirements: ['Roads/highways expertise', 'Environmental assessment knowledge'],
-      url: 'https://www.etenders.gov.kw/',
-      scrapedAt: new Date().toISOString()
-    },
-    {
-      id: 'MPW-2026-4453',
-      source: 'MPW',
-      title: 'Implementation Management - Utility Infrastructure',
-      type: 'Management of Implementation',
-      contractRef: 'General',
-      value: 1500000,
-      deadline: '2026-05-08',
-      status: 'new',
-      description: 'Civil supervision for utility infrastructure including water, electricity, and telecommunications.',
-      scope: ['Utility coordination', 'Trenching supervision', 'Backfill inspection', 'As-built documentation'],
-      requirements: ['Utility sector experience', 'Coordination skills'],
-      url: 'https://www.mpw.gov.kw/',
       scrapedAt: new Date().toISOString()
     }
   ];
 }
 
-// ============================================
-// SCRAPER FUNCTIONS (Public Sites Only)
-// ============================================
+// Puppeteer launch config for Render
+const puppeteerConfig = {
+  headless: 'new',
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu'
+  ]
+};
 
+// Scraper functions
 async function scrapeCAPT() {
-  if (!puppeteer) {
-    console.log('Puppeteer not available - skipping CAPT scrape');
-    return [];
-  }
-  
-  console.log('Scraping CAPT (Central Agency for Public Tenders)...');
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
+  console.log('Scraping CAPT...');
+  const browser = await puppeteer.launch(puppeteerConfig);
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    
-    // CAPT Public Tender Board
     await page.goto('https://www.etenders.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
-    
-    // Extract tender data (public listings only)
     const tenders = await page.evaluate(() => {
       const results = [];
-      // This is a placeholder - actual selectors depend on site structure
-      const rows = document.querySelectorAll('.tender-row, .announcement-item, tr');
-      rows.forEach(row => {
-        const title = row.querySelector('.title, td:nth-child(2), h3')?.textContent?.trim();
+      document.querySelectorAll('.tender-row, tr').forEach(row => {
+        const title = row.querySelector('.title, td:nth-child(2)')?.textContent?.trim();
         if (title && (title.includes('PMC') || title.includes('Supervision') || title.includes('Management'))) {
-          results.push({
-            title: title,
-            source: 'CAPT',
-            scrapedFrom: window.location.href
-          });
+          results.push({ title, source: 'CAPT', scrapedFrom: window.location.href });
         }
       });
       return results;
     });
-    
     return tenders;
   } catch (error) {
-    console.error('CAPT scrape error:', error.message);
+    console.error('CAPT error:', error.message);
     return [];
   } finally {
     await browser.close();
@@ -245,43 +149,24 @@ async function scrapeCAPT() {
 }
 
 async function scrapeMPW() {
-  if (!puppeteer) {
-    console.log('Puppeteer not available - skipping MPW scrape');
-    return [];
-  }
-  
-  console.log('Scraping MPW (Ministry of Public Works)...');
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
+  console.log('Scraping MPW...');
+  const browser = await puppeteer.launch(puppeteerConfig);
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    
-    // MPW Public Announcements
     await page.goto('https://www.mpw.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
-    
     const tenders = await page.evaluate(() => {
       const results = [];
-      const announcements = document.querySelectorAll('.news-item, .announcement, .tender');
-      announcements.forEach(item => {
+      document.querySelectorAll('.news-item, .announcement').forEach(item => {
         const title = item.textContent?.trim();
-        if (title && (title.includes('مناقصة') || title.includes('Tender') || title.includes('Project'))) {
-          results.push({
-            title: title,
-            source: 'MPW',
-            scrapedFrom: window.location.href
-          });
+        if (title && (title.includes('مناقصة') || title.includes('Tender'))) {
+          results.push({ title, source: 'MPW', scrapedFrom: window.location.href });
         }
       });
       return results;
     });
-    
     return tenders;
   } catch (error) {
-    console.error('MPW scrape error:', error.message);
+    console.error('MPW error:', error.message);
     return [];
   } finally {
     await browser.close();
@@ -289,44 +174,24 @@ async function scrapeMPW() {
 }
 
 async function scrapePAHW() {
-  if (!puppeteer) {
-    console.log('Puppeteer not available - skipping PAHW scrape');
-    return [];
-  }
-  
-  console.log('Scraping PAHW (Public Authority for Housing Welfare)...');
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
+  console.log('Scraping PAHW...');
+  const browser = await puppeteer.launch(puppeteerConfig);
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    
     await page.goto('https://www.pahw.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
-    
     const tenders = await page.evaluate(() => {
       const results = [];
-      // Look for contract 1635, 1636, 1637 references
-      const items = document.querySelectorAll('.project-item, .news-item, .announcement');
-      items.forEach(item => {
+      document.querySelectorAll('.project-item, .news-item').forEach(item => {
         const text = item.textContent?.trim();
-        if (text && (text.includes('1635') || text.includes('1636') || text.includes('1637') || 
-                     text.includes('مشروع') || text.includes('Project'))) {
-          results.push({
-            title: text.substring(0, 100),
-            source: 'PAHW',
-            scrapedFrom: window.location.href
-          });
+        if (text && (text.includes('1635') || text.includes('1636') || text.includes('1637') || text.includes('Project'))) {
+          results.push({ title: text.substring(0, 100), source: 'PAHW', scrapedFrom: window.location.href });
         }
       });
       return results;
     });
-    
     return tenders;
   } catch (error) {
-    console.error('PAHW scrape error:', error.message);
+    console.error('PAHW error:', error.message);
     return [];
   } finally {
     await browser.close();
@@ -334,44 +199,24 @@ async function scrapePAHW() {
 }
 
 async function scrapePAAET() {
-  if (!puppeteer) {
-    console.log('Puppeteer not available - skipping PAAET scrape');
-    return [];
-  }
-  
-  console.log('Scraping PAAET (Public Authority for Applied Education & Training)...');
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
+  console.log('Scraping PAAET...');
+  const browser = await puppeteer.launch(puppeteerConfig);
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    
     await page.goto('https://www.paaet.edu.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
-    
     const tenders = await page.evaluate(() => {
       const results = [];
-      // Look for Arabic keywords: مناقصة (tender), إدارة تنفيذ (management of implementation)
-      const items = document.querySelectorAll('.news-item, .announcement, .tender');
-      items.forEach(item => {
+      document.querySelectorAll('.news-item, .announcement').forEach(item => {
         const text = item.textContent?.trim();
-        if (text && (text.includes('مناقصة') || text.includes('إدارة تنفيذ') || 
-                     text.includes('مشروع') || text.includes('تعليم'))) {
-          results.push({
-            title: text.substring(0, 100),
-            source: 'PAAET',
-            scrapedFrom: window.location.href
-          });
+        if (text && (text.includes('مناقصة') || text.includes('إدارة تنفيذ'))) {
+          results.push({ title: text.substring(0, 100), source: 'PAAET', scrapedFrom: window.location.href });
         }
       });
       return results;
     });
-    
     return tenders;
   } catch (error) {
-    console.error('PAAET scrape error:', error.message);
+    console.error('PAAET error:', error.message);
     return [];
   } finally {
     await browser.close();
@@ -380,11 +225,9 @@ async function scrapePAAET() {
 
 // Main scrape function
 async function runScraper() {
-  console.log(`\n[${new Date().toISOString()}] Starting scraper run...`);
-  
+  console.log(`[${new Date().toISOString()}] Starting scraper...`);
   const allTenders = [];
   
-  // Scrape all sources
   const [capt, mpw, pahw, paaet] = await Promise.allSettled([
     scrapeCAPT(),
     scrapeMPW(),
@@ -397,13 +240,11 @@ async function runScraper() {
   if (pahw.status === 'fulfilled') allTenders.push(...pahw.value);
   if (paaet.status === 'fulfilled') allTenders.push(...paaet.value);
   
-  console.log(`Scraped ${allTenders.length} new tenders`);
+  console.log(`Scraped ${allTenders.length} tenders`);
   
-  // Merge with existing tenders
   const existingTenders = await loadTenders();
   const existingIds = new Set(existingTenders.map(t => t.id));
   
-  // Add new tenders with proper formatting
   const newTenders = allTenders
     .filter(t => t.title && !existingIds.has(t.id))
     .map((t, i) => ({
@@ -415,35 +256,123 @@ async function runScraper() {
       value: Math.floor(Math.random() * 4000000) + 500000,
       deadline: getFutureDate(),
       status: 'new',
-      description: `Scraped from ${t.source} public tender board`,
-      scope: ['Details available on source website'],
-      requirements: ['Check source website for requirements'],
+      description: `Scraped from ${t.source}`,
+      scope: ['Details on source website'],
+      requirements: ['Check source website'],
       url: t.scrapedFrom,
       scrapedAt: new Date().toISOString()
     }));
   
   const merged = [...newTenders, ...existingTenders];
   await saveTenders(merged);
-  
-  console.log(`[${new Date().toISOString()}] Scraper complete. Total tenders: ${merged.length}`);
+  console.log(`[${new Date().toISOString()}] Scraper complete. Total: ${merged.length}`);
   return merged;
 }
 
-// Helper: Detect tender type from title
 function detectType(title) {
   const lower = title.toLowerCase();
   if (lower.includes('pmc') || lower.includes('project management')) return 'PMC';
   if (lower.includes('civil supervision') || lower.includes('construction supervision')) return 'Civil Supervision';
   if (lower.includes('construction management')) return 'Construction Management';
-  if (lower.includes('إدارة تنفيذ') || lower.includes('implementation management') || lower.includes('management of implementation')) return 'Management of Implementation';
+  if (lower.includes('إدارة تنفيذ') || lower.includes('implementation management')) return 'Management of Implementation';
   if (lower.includes('infrastructure')) return 'Infrastructure';
   return 'General';
 }
 
-// Helper: Get random future date
 function getFutureDate() {
-  const days = Math.floor(Math.random() * 60) + 14; // 2-74 days from now
+  const days = Math.floor(Math.random() * 60) + 14;
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().split('T')[0];
 }
+
+// API Routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+});
+
+app.get('/api/tenders', async (req, res) => {
+  try {
+    const tenders = await loadTenders();
+    res.json({ success: true, count: tenders.length, data: tenders });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/tenders/:source', async (req, res) => {
+  try {
+    const tenders = await loadTenders();
+    const filtered = tenders.filter(t => t.source === req.params.source.toUpperCase());
+    res.json({ success: true, count: filtered.length, data: filtered });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/scrape', async (req, res) => {
+  try {
+    const tenders = await runScraper();
+    res.json({ success: true, message: 'Scrape completed', count: tenders.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/tenders', async (req, res) => {
+  try {
+    const tenders = await loadTenders();
+    const newTender = {
+      id: req.body.id || `${req.body.source}-2026-${Date.now()}`,
+      ...req.body,
+      scrapedAt: new Date().toISOString()
+    };
+    const existingIndex = tenders.findIndex(t => t.id === newTender.id);
+    if (existingIndex >= 0) {
+      tenders[existingIndex] = newTender;
+    } else {
+      tenders.unshift(newTender);
+    }
+    await saveTenders(tenders);
+    res.json({ success: true, data: newTender });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/tenders/:id', async (req, res) => {
+  try {
+    const tenders = await loadTenders();
+    const filtered = tenders.filter(t => t.id !== req.params.id);
+    await saveTenders(filtered);
+    res.json({ success: true, message: 'Tender deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Scheduled scraping every 6 hours
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Running scheduled scrape...');
+  await runScraper();
+});
+
+// Startup
+async function startup() {
+  await ensureDataDir();
+  const tenders = await loadTenders();
+  if (tenders.length === 0) {
+    await saveTenders(getDefaultTenders());
+  }
+  
+  app.listen(PORT, () => {
+    console.log(`\n========================================`);
+    console.log(`HG-BD Scraper Backend`);
+    console.log(`Running on port ${PORT}`);
+    console.log(`Health: http://localhost:${PORT}/api/health`);
+    console.log(`Tenders: http://localhost:${PORT}/api/tenders`);
+    console.log(`========================================\n`);
+  });
+}
+
+startup().catch(console.error);

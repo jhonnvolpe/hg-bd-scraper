@@ -1,12 +1,11 @@
 /**
  * HG-BD Tender Scraper Backend
- * Render-Compatible Version
+ * Render-Compatible - Server starts immediately
  */
 
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
-const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -17,6 +16,19 @@ const DATA_FILE = path.join(__dirname, 'data', 'tenders.json');
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Puppeteer will be loaded lazily
+let puppeteer = null;
+
+// Load Puppeteer asynchronously (after server starts)
+async function loadPuppeteer() {
+  try {
+    puppeteer = require('puppeteer');
+    console.log('Puppeteer loaded successfully');
+  } catch (e) {
+    console.log('Puppeteer not available:', e.message);
+  }
+}
 
 // Ensure data directory exists
 async function ensureDataDir() {
@@ -112,20 +124,27 @@ function getDefaultTenders() {
 }
 
 // Puppeteer launch config for Render
-const puppeteerConfig = {
-  headless: 'new',
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu'
-  ]
-};
+function getPuppeteerConfig() {
+  return {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
+  };
+}
 
 // Scraper functions
 async function scrapeCAPT() {
+  if (!puppeteer) {
+    console.log('Puppeteer not loaded yet');
+    return [];
+  }
+  
   console.log('Scraping CAPT...');
-  const browser = await puppeteer.launch(puppeteerConfig);
+  const browser = await puppeteer.launch(getPuppeteerConfig());
   try {
     const page = await browser.newPage();
     await page.goto('https://www.etenders.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
@@ -149,8 +168,13 @@ async function scrapeCAPT() {
 }
 
 async function scrapeMPW() {
+  if (!puppeteer) {
+    console.log('Puppeteer not loaded yet');
+    return [];
+  }
+  
   console.log('Scraping MPW...');
-  const browser = await puppeteer.launch(puppeteerConfig);
+  const browser = await puppeteer.launch(getPuppeteerConfig());
   try {
     const page = await browser.newPage();
     await page.goto('https://www.mpw.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
@@ -174,8 +198,13 @@ async function scrapeMPW() {
 }
 
 async function scrapePAHW() {
+  if (!puppeteer) {
+    console.log('Puppeteer not loaded yet');
+    return [];
+  }
+  
   console.log('Scraping PAHW...');
-  const browser = await puppeteer.launch(puppeteerConfig);
+  const browser = await puppeteer.launch(getPuppeteerConfig());
   try {
     const page = await browser.newPage();
     await page.goto('https://www.pahw.gov.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
@@ -199,8 +228,13 @@ async function scrapePAHW() {
 }
 
 async function scrapePAAET() {
+  if (!puppeteer) {
+    console.log('Puppeteer not loaded yet');
+    return [];
+  }
+  
   console.log('Scraping PAAET...');
-  const browser = await puppeteer.launch(puppeteerConfig);
+  const browser = await puppeteer.launch(getPuppeteerConfig());
   try {
     const page = await browser.newPage();
     await page.goto('https://www.paaet.edu.kw/', { waitUntil: 'networkidle2', timeout: 30000 });
@@ -226,6 +260,12 @@ async function scrapePAAET() {
 // Main scrape function
 async function runScraper() {
   console.log(`[${new Date().toISOString()}] Starting scraper...`);
+  
+  // Ensure Puppeteer is loaded
+  if (!puppeteer) {
+    await loadPuppeteer();
+  }
+  
   const allTenders = [];
   
   const [capt, mpw, pahw, paaet] = await Promise.allSettled([
@@ -288,7 +328,12 @@ function getFutureDate() {
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(), 
+    puppeteer: puppeteer ? 'loaded' : 'not loaded',
+    version: '1.0.0' 
+  });
 });
 
 app.get('/api/tenders', async (req, res) => {
@@ -351,28 +396,47 @@ app.delete('/api/tenders/:id', async (req, res) => {
   }
 });
 
-// Scheduled scraping every 6 hours
-cron.schedule('0 */6 * * *', async () => {
-  console.log('Running scheduled scrape...');
-  await runScraper();
+// ============================================
+// START SERVER IMMEDIATELY
+// ============================================
+
+// Start server FIRST - before any async initialization
+app.listen(PORT, () => {
+  console.log(`\n========================================`);
+  console.log(`HG-BD Scraper Backend`);
+  console.log(`Running on port ${PORT}`);
+  console.log(`Health: http://localhost:${PORT}/api/health`);
+  console.log(`Tenders: http://localhost:${PORT}/api/tenders`);
+  console.log(`========================================\n`);
 });
 
-// Startup
-async function startup() {
+// ============================================
+// BACKGROUND INITIALIZATION (after server starts)
+// ============================================
+
+async function backgroundInit() {
+  // Initialize data directory and default tenders
   await ensureDataDir();
   const tenders = await loadTenders();
   if (tenders.length === 0) {
+    console.log('Initializing with default tenders...');
     await saveTenders(getDefaultTenders());
   }
   
-  app.listen(PORT, () => {
-    console.log(`\n========================================`);
-    console.log(`HG-BD Scraper Backend`);
-    console.log(`Running on port ${PORT}`);
-    console.log(`Health: http://localhost:${PORT}/api/health`);
-    console.log(`Tenders: http://localhost:${PORT}/api/tenders`);
-    console.log(`========================================\n`);
+  // Load Puppeteer in background (non-blocking)
+  console.log('Loading Puppeteer in background...');
+  await loadPuppeteer();
+  
+  // Schedule scraping every 6 hours
+  cron.schedule('0 */6 * * *', async () => {
+    console.log('Running scheduled scrape...');
+    await runScraper();
   });
+  
+  console.log('Background initialization complete');
 }
 
-startup().catch(console.error);
+// Run background init (doesn't block server)
+backgroundInit().catch(err => {
+  console.error('Background init error:', err.message);
+});

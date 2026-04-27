@@ -1,7 +1,7 @@
 {
   "name": "hg-scraper-backend",
-  "version": "1.0.0",
-  "description": "HG-BD Tender Scraper Backend",
+  "version": "2.0.0",
+  "description": "HG-BD Tender Scraper with Stealth",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,7 +10,8 @@
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "node-cron": "^3.0.3",
-    "puppeteer": "^21.6.1"
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "engines": {
     "node": ">=18.0.0"
